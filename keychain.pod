@@ -8,7 +8,7 @@ S<keychain [ -hklQqV ] [ --clear --confhost --gpg2 --help --ignore-missing --lis
 S<--noask --nocolor --nogui --nolock --quick --quiet --version ]>
 S<[ --agents I<list> ] [ --attempts I<num> ] [ --dir I<dirname> ]>
 S<[ --host I<name> ] [ --lockwait I<seconds> ]>
-S<[ --stop I<which> ] [ --timeout I<minutes> ] [ keys... ]>
+S<[ --stop [I<which>] ] [ --timeout I<minutes> ] [ keys... ]>
 
 =head1 DESCRIPTION
 
@@ -213,7 +213,7 @@ Don't inherit any agent processes, overriding the default
 Don't attempt to use a lockfile while manipulating files, pids and
 keys.
 
-=item B<-k --stop> I<which>
+=item B<-k --stop> [I<which>]
 
 Kill currently running agent processes.  The following values are
 valid for "which":
@@ -222,8 +222,8 @@ valid for "which":
 
 =item all
 
-Kill all agent processes and quit keychain immediately.  Prior to
-keychain-2.5.0, this was the behavior of the bare "--stop" option.
+Kill all agent processes and quit keychain immediately.  This is the
+default behavior if no "which" value is given.
 
 =item others
 
