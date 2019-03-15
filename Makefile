@@ -4,6 +4,7 @@ RPMDIR=`rpmbuild -E '%_rpmdir'`
 SRPMDIR=`rpmbuild -E '%_srcrpmdir'`
 TARBALL_CONTENTS=keychain README.md ChangeLog COPYING.txt keychain.pod keychain.1 \
 				 keychain.spec
+GITTAG ?= $(shell git describe --abbrev=0 --tags)
 
 all: keychain.1 keychain keychain.spec
 
@@ -26,6 +27,25 @@ keychain.1: keychain.pod keychain.sh
 
 keychain.1.gz: keychain.1
 	gzip -9 keychain.1
+
+# Create a tar from the provided git tag.
+bz2:
+	if [ -e "$(PWD)/keychain-$(GITTAG).tar.bz2" ]; \
+	then \
+	  rm "$(PWD)/keychain-$(GITTAG).tar.bz2"; \
+	fi; \
+	git archive --prefix=keychain-$(GITTAG)/ $(GITTAG) > "$(PWD)/keychain-$(GITTAG).tar"
+	bzip2 keychain-$(GITTAG).tar
+
+# NOTE: build will fail if tag and specfile
+#       content are out of sync!
+srpm: bz2
+	rpmbuild -ts --define='_srcrpmdir $(PWD)' keychain-$(GITTAG).tar.bz2
+
+rpm: bz2
+	rpmbuild -tb --define='_rpmdir $(PWD)' \
+	  --define='_build_name_fmt %{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm' \
+	  keychain-$(GITTAG).tar.bz2
 
 GENKEYCHAINPL = open P, "keychain.txt" or die "cant open keychain.txt"; \
 			while (<P>) { \
