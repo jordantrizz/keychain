@@ -47,7 +47,7 @@ rpm: bz2
 	  --define='_build_name_fmt %{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}.rpm' \
 	  keychain-$(GITTAG).tar.bz2
 
-GENKEYCHAINPL = open P, "keychain.txt" or die "cant open keychain.txt"; \
+GENKEYCHAINPL = open P, "keychain.txt" or die "cannot open keychain.txt"; \
 			while (<P>) { \
 				$$printing = 0 if /^\w/; \
 				$$printing = 1 if /^(SYNOPSIS|OPTIONS)/; \
@@ -59,7 +59,7 @@ GENKEYCHAINPL = open P, "keychain.txt" or die "cant open keychain.txt"; \
 				s/(^|\s)(-+[-\w]+)/$$1\$${GREEN}$$2\$${OFF}/g; \
 				$$pod .= $$_; \
 			}; \
-		open B, "keychain.sh" or die "cant open keychain.sh"; \
+		open B, "keychain.sh" or die "cannot open keychain.sh"; \
 			$$/ = undef; \
 			$$_ = <B>; \
 			s/INSERT_POD_OUTPUT_HERE[\r\n]/$$pod/ || die; \

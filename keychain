@@ -32,6 +32,7 @@ openssh=unknown
 sunssh=unknown
 confhost=unknown
 sshconfig=false
+confallhosts=false
 quickopt=false
 quietopt=false
 clearopt=false
@@ -128,11 +129,12 @@ versinfo() {
 helpinfo() {
 	cat >&1 <<EOHELP
 SYNOPSIS
-    keychain [ ${GREEN}-hklQqV${OFF} ] [ ${GREEN}--clear${OFF} ${GREEN}--confhost${OFF} ${GREEN}--gpg2${OFF} ${GREEN}--help${OFF} ${GREEN}--ignore-missing${OFF}
-     ${GREEN}--list${OFF} ${GREEN}--noask${OFF} ${GREEN}--nocolor${OFF} ${GREEN}--nogui${OFF} ${GREEN}--nolock${OFF} ${GREEN}--quick${OFF} ${GREEN}--quiet${OFF} ${GREEN}--version${OFF} ]
+    keychain [ ${GREEN}-hklQqV${OFF} ] [ ${GREEN}--clear${OFF} ${GREEN}--confhost${OFF} ${GREEN}--confallhosts${OFF} ${GREEN}--gpg2${OFF} ${GREEN}--help${OFF} -
+    ${GREEN}-ignore-missing${OFF} ${GREEN}--list${OFF}
+    ${GREEN}--noask${OFF} ${GREEN}--nocolor${OFF} ${GREEN}--nogui${OFF} ${GREEN}--nolock${OFF} ${GREEN}--quick${OFF} ${GREEN}--quiet${OFF} ${GREEN}--version${OFF} ]
     [ ${GREEN}--agents${OFF} ${CYAN}list${OFF} ] [ ${GREEN}--attempts${OFF} ${CYAN}num${OFF} ] [ ${GREEN}--dir${OFF} ${CYAN}dirname${OFF} ]
     [ ${GREEN}--host${OFF} ${CYAN}name${OFF} ] [ ${GREEN}--lockwait${OFF} ${CYAN}seconds${OFF} ]
-    [ ${GREEN}--stop${OFF} ${CYAN}which${OFF} ] [ ${GREEN}--timeout${OFF} ${CYAN}minutes${OFF} ] [ keys... ]
+    [ ${GREEN}--stop${OFF} [${CYAN}which${OFF}] ] [ ${GREEN}--timeout${OFF} ${CYAN}minutes${OFF} ] [ keys... ]
 
 OPTIONS
     ${GREEN}--agents${OFF} ${CYAN}list${OFF}
@@ -153,8 +155,14 @@ OPTIONS
     ${GREEN}--confhost${OFF}
         By default, keychain will look for key pairs in the ~/.ssh/
         directory. The ${GREEN}--confhost${OFF} option will inform keychain to look in
-        ~/.ssh/config for IdentityFile settings defined for particular
-        hosts, and use these paths to locate keys.
+        ~/.ssh/config for IdentityFile settings defined for the mentioned
+        host (in ${CYAN}keys${OFF}), and use these paths to locate keys.
+
+    ${GREEN}--confallhosts${OFF}
+        By default, keychain will look for key pairs in the ~/.ssh/
+        directory. The ${GREEN}--confallhosts${OFF} option will inform keychain to look in
+        ~/.ssh/config for IdentityFile settings defined for all hosts, and
+        use these paths to locate keys to load.
 
     ${GREEN}--confirm${OFF}
         Keys are subject to interactive confirmation by the SSH_ASKPASS
@@ -260,15 +268,14 @@ OPTIONS
         Don't attempt to use a lockfile while manipulating files, pids and
         keys.
 
-    ${GREEN}-k${OFF} ${GREEN}--stop${OFF} ${CYAN}which${OFF}
+    ${GREEN}-k${OFF} ${GREEN}--stop${OFF} [${CYAN}which${OFF}]
         Kill currently running agent processes. The following values are
         valid for "which":
 
         all      Kill all agent processes and quit keychain immediately.
-                 Prior to keychain-2.5.0, this was the behavior of the bare
-                 "--stop" option.
+                 This is the default behavior if no "which" value is given.
 
-        others   Kill agent processes other than the one keychain is
+        others   Kill agent processes other than the ones keychain is
                  providing. Prior to keychain-2.5.0, keychain would do this
                  automatically. The new behavior requires that you specify
                  it explicitly if you want it.
@@ -1034,7 +1041,15 @@ ssh_listmissing() {
 
 	for slm_k in "$@"; do
 		# Fingerprint current user-specified key
-		slm_finger=$(ssh_f "$slm_k") || continue
+		if ! slm_finger=$(ssh_f "$slm_k"); then
+			warn "Unable to extract fingerprint from keyfile ${slm_k}.pub, skipping"
+			continue
+		fi
+		slm_wordcount="$(printf -- '%s\n' "$slm_finger" | wc -w)"
+		if [ "$slm_wordcount" -ne 1 ]; then
+			warn "Unable to extract exactly one key fingerprint from keyfile ${slm_k}.pub, got $slm_wordcount instead, skipping"
+			continue
+		fi
 
 		# Check if it needs to be added
 		case " $sshavail " in
@@ -1074,8 +1089,10 @@ add_sshkey() {
 # synopsis: parse_mykeys
 # Sets $sshkeys and $gpgkeys based on $mykeys
 parse_mykeys() {
-	# Possible path to the private key: if --confhost variable used.
-	pkeypath="$1"
+  for pkeypath in "$@"; do
+    mykeys=${mykeys+"$mykeys
+"}"$pkeypath"
+  done
 
 	# Parse $mykeys into positional params to preserve spaces in filenames
 	set -f		   # disable globbing
@@ -1095,8 +1112,6 @@ parse_mykeys() {
 				add_sshkey "$HOME/.ssh/$pm_k" ; continue
 			elif [ -f "$HOME/.ssh2/$pm_k" ]; then
 				add_sshkey "$HOME/.ssh2/$pm_k" ; continue
-			elif [ -f "$pkeypath" ]; then
-				add_sshkey "$pkeypath"; continue
 			fi
 		fi
 
@@ -1140,7 +1155,7 @@ setagents() {
 		done
 		agentsopt="${new_agentsopt}"
 	else
-		for a in ssh; do
+		for a in ssh gpg; do
 			command -v ${a}-agent >/dev/null || continue
 			agentsopt="${agentsopt+$agentsopt }${a}"
 		done
@@ -1204,7 +1219,7 @@ while [ -n "$1" ]; do
 				stopwhich=all; shift
 			else
 				# backward compat
-				stopwhich=all-warn
+				stopwhich=all
 			fi
 			;;
 		--version|-V)
@@ -1319,6 +1334,14 @@ while [ -n "$1" ]; do
 				confhost="$2"
 			else
 				warn "~/.ssh/config not found; --confhost/-c option ignored."
+			fi
+			;;
+    --confallhosts|-C)
+			if [ -e ~/.ssh/config ]; then
+				sshconfig=true
+        confallhosts=true
+			else
+				warn "~/.ssh/config not found; --confallhosts/-C option ignored."
 			fi
 			;;
 		--nocolor)
@@ -1553,16 +1576,32 @@ fi
 # --noask: "don't ask for keys", so we're all done
 $noaskopt && { qprint; exit 0; }
 
-# If the --confhost option used, determine the path to the private key as
-# written in the ~/.ssh/config and add it to ssh-add.
+# If the --confhost or the --confallhosts option used, and the .ssh/config
+# file exists, either load host key or all keys defined
 if $sshconfig; then
-	pkeypath=$(confpath "$confhost")
-	eval pkeypath=$pkeypath
+  if $confallhosts; then
+    # If the --confallhosts option used, load all the private keys defined in
+    # the .ssh/config file and add them to ssh-add
+    while IFS= read -r line; do
+      case $line in
+        *IdentityFile*)
+        currentpath="$(echo $line | awk '{print $2}')"
+        eval currentpath=$currentpath
+        pkeypaths=${pkeypaths+"$pkeypaths
+"}"$currentpath"   
+      esac
+    done < ~/.ssh/config
+  else
+    # If the --confhost option is used, find the private key through 
+    # .ssh/config file and load it with ssh-add
+    pkeypaths=$(confpath "$confhost")
+	  eval pkeypaths=$pkeypaths
+  fi
 fi
 
 # Parse $mykeys into ssh vs. gpg keys; it may be necessary in the future to
 # differentiate on the cmdline
-parse_mykeys "$pkeypath" || die
+parse_mykeys "$pkeypaths" || die
 
 # Load ssh keys
 if wantagent ssh; then
