@@ -10,14 +10,17 @@
 # Originally authored by Daniel Robbins <drobbins@gentoo.org>
 # Maintained August 2002 - April 2003 by Seth Chandler <sethbc@gentoo.org>
 # Maintained and rewritten April 2004 - July 2007 by Aron Griffis <agriffis@n01se.net>
-# Maintained July 2009 - Sept 2017 by Daniel Robbins <drobbins@funtoo.org>
+# Maintained July 2009 - September 2017 by Daniel Robbins <drobbins@funtoo.org>
 # Maintained September 2017 - present by Ryan Harris <x48rph@gmail.com>
+# Forked by @jordantrizz https://github.com/jordantrizz/keychain
+# Forked by @necrotech https://github.com/necrotech/keychain
 
-version=2.8.5
+
+version=2.8.6
 
 PATH="${PATH:-/usr/bin:/bin:/sbin:/usr/sbin:/usr/ucb}"
 
-maintainer="x48rph@gmail.com"
+maintainer="https://github.com/jordantrizz/keychain"
 unset mesglog
 unset myaction
 unset agentsopt
@@ -466,7 +469,7 @@ findpids() {
 
 	# If none worked, we're stuck
 	error "Unable to use \"ps\" to scan for $fp_prog-agent processes"
-	error "Please report to $maintainer via http://bugs.gentoo.org"
+	error "Please report to $maintainer"
 	return 1
 }
 

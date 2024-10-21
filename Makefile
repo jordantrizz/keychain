@@ -2,7 +2,7 @@ V:=$(shell cat VERSION)
 D:=$(shell date +'%d %b %Y')
 RPMDIR=`rpmbuild -E '%_rpmdir'`
 SRPMDIR=`rpmbuild -E '%_srcrpmdir'`
-TARBALL_CONTENTS=keychain README.md ChangeLog COPYING.txt keychain.pod keychain.1 \
+TARBALL_CONTENTS=keychain README.md CHANGELOG.md COPYING.txt keychain.pod keychain.1 \
 				 keychain.spec
 GITTAG ?= $(shell git describe --abbrev=0 --tags)
 
@@ -78,8 +78,8 @@ keychain-$V.tar.gz: $(TARBALL_CONTENTS)
 		echo "**** Version is $V, please remove -test"; \
 		exit 1 ;; \
 	esac
-	@if ! grep -qF '* keychain $V ' ChangeLog; then \
-		echo "**** Need to update the ChangeLog for version $V"; \
+	@if ! grep -qF '* keychain $V ' CHANGELOG.md; then \
+		echo "**** Need to update the CHANGELOG.md for version $V"; \
 		exit 1; \
 	fi
 	mkdir keychain-$V

@@ -38,4 +38,4 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
      %{_bindir}/*
 %doc %{_mandir}/*/*
-%doc ChangeLog COPYING.txt keychain.pod README.md
+%doc CHANGELOG.md COPYING.txt keychain.pod README.md

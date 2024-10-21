@@ -1,5 +1,5 @@
 Name:      keychain
-Version:   2.8.5
+Version:   2.8.6
 Release:   1
 Summary:   agent manager for OpenSSH, ssh.com, Sun SSH, and GnuPG
 Packager:  Daniel Robbins <drobbins@funtoo.org>
@@ -38,4 +38,4 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
      %{_bindir}/*
 %doc %{_mandir}/*/*
-%doc ChangeLog COPYING.txt keychain.pod README.md
+%doc CHANGELOG.md COPYING.txt keychain.pod README.md
